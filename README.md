@@ -1,20 +1,44 @@
-1. Clone repo link từ github: https://github.com/TruongVanHien194276/Project_IT3190_Team1.git
-2. Download bộ dataset từ Kaggle và lưu ở project: Age prediction | Kaggle
-3. Cài đặt môi trường Anaconda
-- Cài Anaconda tại link: https://www.anaconda.com/products/distribution
-- Mở Anaconda Promt (Run as Administrator)
-o Tạo môi trường mới: conda create --name env_machine
-o Cấu hình môi trường: activate env_machine
-o Cài đặt tensorflow: conda install -c conda-forge tensorflow
-o Cài đặt pandas: conda install -c anaconda pandas
-o Cài đặt matplotlib: conda install -c conda-forge matplotlib
-o Cài đặt scikit-learn: conda install -c anaconda scikit-learn
-o Cài đặt OpenCV: conda install -c conda-forge opencv
-4. Cài đặt các thư viện còn thiếu
-5. Mở project bằng pycharm
-- Chọn File -> Settings (Ctrl + Alt + S) -> Project -> Python Interpreter
-- Đổi Python Interpreter sang đường dẫn file python.exe của anaconda 
-(Ví dụ: D:\Program Files\Anaconda\envs\env_machine\python.exe)
-5. Sửa đường dẫn Model trong file face_detection.py
-6. Chạy camera.py để mở app
-7. Để test tập dữ liệu sử dụng file test.py (Sửa link Model và link dữ liệu image_dir)
+# Hướng dẫn Cài đặt & Chạy Project Dự đoán Tuổi
+
+## 1. Chuẩn bị
+1. **Clone repo**:
+   ```bash
+   git clone https://github.com/TruongVanHien194276/Project_IT3190_Team1.git
+   ```
+2. **Download Dataset**:
+   - Tải dataset từ Kaggle: [Age prediction](https://www.kaggle.com/) (hoặc nguồn tương ứng).
+   - Giải nén và lưu vào thư mục project (để train lại nếu cần).
+
+## 2. Cài đặt Môi trường (Anaconda)
+Nếu đã có file `environment.yml` trong `Source_code`:
+```bash
+cd Source_code
+conda env create -f environment.yml
+conda activate env_machine
+```
+
+## 3. Cấu hình & Thêm Model
+Project yêu cầu file model đã train để chạy tính năng dự đoán.
+
+### Nếu bạn đã có file model training (ví dụ trong folder `moDel`):
+1. Vào thư mục `Source_code`.
+2. Tạo thư mục mới tên là `models` (nếu chưa có).
+3. Copy file model ở trong thư mục `moDel` vào thư mục `models`.
+
+### Nếu bạn chưa có model:
+- Chạy `python train.py` để tự train model mới (đòi hỏi dataset).
+
+## 4. Chạy Ứng dụng
+1. Mở terminal/cmd tại thư mục `Source_code`.
+2. Kích hoạt môi trường:
+   ```bash
+   conda activate env_machine
+   ```
+3. Chạy ứng dụng Camera:
+   ```bash
+   python camera.py
+   ```
+
+## 5. Lưu ý
+- Nếu gặp lỗi `Image.ANTIALIAS`, hãy đảm bảo dùng `Pillow` phiên bản mới nhất và code đã xử lý `Image.Resampling.LANCZOS`.
+- Model càng train kỹ (val_loss thấp) thì dự đoán càng chính xác.
