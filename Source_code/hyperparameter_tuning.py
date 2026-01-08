@@ -21,13 +21,13 @@ print("\n[1/4] Loading and balancing dataset...")
 
 image_dir = Path(os.path.join(os.path.dirname(__file__), 'dataset', 'age_prediction_up', 'train'))
 filepaths = pd.Series(list(image_dir.glob(r'**/*.jpg')), name='Filepath').astype(str)
-ages = pd.Series(filepaths.apply(lambda x: os.path.split(os.path.split(x)[0])[1]), name='Age').astype(np.int)
+ages = pd.Series(filepaths.apply(lambda x: os.path.split(os.path.split(x)[0])[1]), name='Age').astype(int)
 images = pd.concat([filepaths, ages], axis=1).sample(frac=1.0, random_state=1).reset_index(drop=True)
 
 # Data Balancing
 age_ranges = [
-    (1, 10, 12000), (11, 20, 12000), (21, 30, 12000), (31, 40, 12000), (41, 50, 12000),
-    (51, 60, 12000), (61, 70, 12000), (71, 80, 12000), (81, 90, 12000), (91, 100, 10000),
+    (1, 10, 8000), (11, 20, 8000), (21, 30, 8000), (31, 40, 8000), (41, 50, 8000),
+    (51, 60, 8000), (61, 70, 8000), (71, 80, 8000), (81, 90, 8000), (91, 100, 8000),
 ]
 
 balanced_dfs = []

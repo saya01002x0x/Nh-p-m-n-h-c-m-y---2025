@@ -32,38 +32,54 @@ eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 
 def detect(gray, frame): 
     # We create a function that takes as input the image in black and white (gray) 
-    #and the original image (frame), and that will return the same image with the detector rectangles. 
+    # and the original image (frame), and that will return the same image with the detector rectangles. 
     
-    faces = face_cascade.detectMultiScale(gray,scaleFactor=1.3,minNeighbors=5)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
     # We apply the detectMultiScale method from the face cascade to locate one or several faces in the image.
-    #scaleFactor--specifying how much the image size is reduced at each image scale
-    #minNeighbors--specifying how many neighbors each candidate rectangle should have
+    # scaleFactor -- specifying how much the image size is reduced at each image scale
+    # minNeighbors -- specifying how many neighbors each candidate rectangle should have
     
-    for (x, y, w, h) in faces: # For each detected face: (faces is the tuple of x,y--point of upper left corner,w-width,h-height)
-        cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 3)  #frame on which rectangle will be there,top-left,bottom-right,color,thickness
-        img_cat = frame[x:y, x+w:y+h] #Create images
-        img_age = np.resize(img_cat, (3, 120, 120, 3))  #resize image
+    for (x, y, w, h) in faces:  # For each detected face: (faces is the tuple of x,y--point of upper left corner, w-width, h-height)
+        # Extract face region
+        img_cat = frame[y:y+h, x:x+w]  # Fixed: was x:y, should be y:y+h
+        
+        if img_cat.size == 0:  # Skip if face region is invalid
+            continue
+            
+        # Resize for model input
+        img_age = cv2.resize(img_cat, (120, 120))
+        img_age = np.expand_dims(img_age, axis=0)  # Add batch dimension
         img_age = img_age.astype('float32')
-        # model.predict(img_age)
-        img_pedict = test_generator.flow(img_age, batch_size=32, shuffle=True) # Change image to dataframe
+        
+        # Predict age
+        img_predict = test_generator.flow(img_age, batch_size=1, shuffle=False)
         
         if is_layer:
             # TFSMLayer prediction
-            batch_data = next(img_pedict)
+            batch_data = next(img_predict)
             outputs = model(batch_data)
             # Outputs is a dict, get the first value
             prediction_tensor = list(outputs.values())[0]
-            output_predict = int(np.squeeze(prediction_tensor).item(0))
+            output_predict = int(np.squeeze(prediction_tensor))
         else:
             # Standard Keras model prediction
-            output_predict = int(np.squeeze(model.predict(img_pedict)).item(0))
-        col = (0, 255, 0)
-        cv2.putText(frame, str(output_predict), (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, h/200, col ,2) # Display result
-        # roi_gray = gray[y:y+h, x:x+w] # We get the region of interest in the black and white image. (range from y to y+h)
-        # #This region is calculated as to save computation time to again search for eyes in whole image
-        # #It's better to detect a face and take the region of interest i.e. face and find eyes in it
-        # roi_color = frame[y:y+h, x:x+w] # We get the region of interest in the colored image.
+            output_predict = int(np.squeeze(model.predict(img_predict, verbose=0)))
         
-    return frame # We return the image with the detector rectangles.  
+        # Age-based color logic: Green if <30, Red if >=30
+        if output_predict < 30:
+            color = (0, 255, 0)  # Green (BGR format)
+        else:
+            color = (0, 0, 255)  # Red (BGR format)
+        
+        # Draw rectangle with age-based color
+        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+        
+        # Display age with improved font (HERSHEY_DUPLEX)
+        age_text = f"Age: {output_predict}"
+        font_scale = max(0.6, w / 200)  # Dynamic font size based on face width
+        cv2.putText(frame, age_text, (x, y-10), 
+                    cv2.FONT_HERSHEY_DUPLEX, font_scale, color, 2)
+        
+    return frame  # We return the image with the detector rectangles.  
 
 # def age_predict()

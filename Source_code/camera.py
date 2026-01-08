@@ -16,11 +16,9 @@ def createwidgets():
     root.cameraLabel = Label(root, bg="steelblue", borderwidth=3, relief="groove")
     root.cameraLabel.grid(row=2, column=1, padx=10, pady=10, columnspan=2)
 
-    root.saveLocationEntry = Entry(root, width=55, textvariable=destPath)
-    root.saveLocationEntry.grid(row=3, column=1, padx=10, pady=10)
-
-    root.browseButton = Button(root, width=10, text="BROWSE", command=destBrowse)
-    root.browseButton.grid(row=3, column=2, padx=10, pady=10)
+    # Auto-save info label (removed browse functionality)
+    auto_save_info = Label(root, text="Images auto-saved to: imgs/", bg="steelblue", fg="white", font=('Comic Sans MS', 10))
+    auto_save_info.grid(row=3, column=1, padx=10, pady=10, columnspan=2)
 
     root.captureBTN = Button(root, text="CAPTURE", command=Capture, bg="LIGHTBLUE", font=('Comic Sans MS',15), width=20)
     root.captureBTN.grid(row=4, column=1, padx=10, pady=10)
@@ -46,23 +44,42 @@ def createwidgets():
     # Calling ShowFeed() function
     ShowFeed()
 
-# Defining ShowFeed() function to display webcam feed in the cameraLabel;
+# Defining ShowFeed() function to display webcam feed in the cameraLabel
+# Initialize FPS tracking
+if not hasattr(root, 'fps_start_time'):
+    root.fps_start_time = datetime.now()
+    root.fps_frame_count = 0
+    root.fps_display = 0.0
+
 def ShowFeed():
     # Capturing frame by frame
     ret, frame = root.cap.read()
 
     if ret:
+        # FPS Calculation
+        root.fps_frame_count += 1
+        elapsed_time = (datetime.now() - root.fps_start_time).total_seconds()
+        
+        if elapsed_time > 1.0:  # Update FPS every second
+            root.fps_display = root.fps_frame_count / elapsed_time
+            root.fps_frame_count = 0
+            root.fps_start_time = datetime.now()
+        
         # Flipping the frame vertically
         frame = cv2.flip(frame, 1)
 
+        # Display FPS at top-left corner
+        fps_text = f"FPS: {root.fps_display:.1f}"
+        cv2.putText(frame, fps_text, (10, 25), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 255, 255), 2)
+        
         # Displaying date and time on the feed
-        cv2.putText(frame, datetime.now().strftime('%d/%m/%Y %H:%M:%S'), (20,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0,255,255))
+        cv2.putText(frame, datetime.now().strftime('%d/%m/%Y %H:%M:%S'), (10, 55), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0,255,255), 1)
 
         # Changing the frame color from BGR to RGB
         cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        frame_copy = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         
-        canvas = detect(cv2image, frame)
+        canvas = detect(cv2image, frame_copy)
         # Creating an image memory from the above frame exporting array interface
         videoImg = Image.fromarray(canvas)
 
@@ -82,14 +99,10 @@ def ShowFeed():
         root.cameraLabel.configure(image='')
     
 
-def destBrowse():
-    # Presenting user with a pop-up for directory selection. initialdir argument is optional
-    # Retrieving the user-input destination directory and storing it in destinationDirectory
-    # Setting the initialdir argument is optional. SET IT TO YOUR DIRECTORY PATH
-    destDirectory = filedialog.askdirectory(initialdir="YOUR DIRECTORY PATH")
-
-    # Displaying the directory in the directory textbox
-    destPath.set(destDirectory)
+# Auto-create imgs folder if not exists
+imgs_folder = os.path.join(os.path.dirname(__file__), 'imgs')
+if not os.path.exists(imgs_folder):
+    os.makedirs(imgs_folder)
 
 def imageBrowse():
     
@@ -122,15 +135,15 @@ def Capture():
     # Storing the date in the mentioned format in the image_name variable
     image_name = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
 
-    # If the user has selected the destination directory, then get the directory and save it in image_path
-    if destPath.get() != '':
-        image_path = destPath.get()
-    # If the user has not selected any destination directory, then set the image_path to default directory
-    else:
-        messagebox.showerror("ERROR", "NO DIRECTORY SELECTED TO STORE IMAGE!!")
+    # Auto-save to imgs/ folder
+    image_path = os.path.join(os.path.dirname(__file__), 'imgs')
+    
+    # Ensure imgs folder exists
+    if not os.path.exists(image_path):
+        os.makedirs(image_path)
 
     # Concatenating the image_path with image_name and with .jpg extension and saving it in imgName variable
-    imgName = image_path + '/' + image_name + ".jpg"
+    imgName = os.path.join(image_path, image_name + ".jpg")
 
     # Capturing the frame
     ret, frame = root.cap.read()
@@ -239,8 +252,10 @@ root.resizable(True, True)
 root.configure(background = "sky blue")
 
 # Creating tkinter variables
-destPath = StringVar()
 imagePath = StringVar()
+
+# Import os for path operations
+import os
 
 createwidgets()
 root.mainloop()

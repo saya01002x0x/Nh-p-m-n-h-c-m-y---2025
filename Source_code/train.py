@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 # Load images
 image_dir = Path(os.path.join(os.path.dirname(__file__), 'dataset', 'age_prediction_up', 'train'))
 filepaths = pd.Series(list(image_dir.glob(r'**/*.jpg')), name='Filepath').astype(str)
-ages = pd.Series(filepaths.apply(lambda x: os.path.split(os.path.split(x)[0])[1]), name='Age').astype(np.int)
+ages = pd.Series(filepaths.apply(lambda x: os.path.split(os.path.split(x)[0])[1]), name='Age').astype(int)
 images = pd.concat([filepaths, ages], axis=1).sample(frac=1.0, random_state=1).reset_index(drop=True)
 
 # Save original distribution for comparison
@@ -18,22 +18,22 @@ original_distribution = images['Age'].value_counts().sort_index()
 print(f"Original dataset size: {len(images)} images")
 print(f"Age range: {images['Age'].min()} - {images['Age'].max()}")
 
-# Data Balancing Strategy - Target: 10-15k images per 10-year age group
+# Data Balancing Strategy - Target: 8,000 images per 10-year age group (80k total)
 print("\n=== Starting Comprehensive Data Balancing ===")
-print("Target: 12,000 images per 10-year age range\n")
+print("Target: 8,000 images per 10-year age range (80k total)\n")
 
 # Define age ranges and their target counts
 age_ranges = [
-    (1, 10, 12000),    # Currently: 2,748
-    (11, 20, 12000),   # Currently: 12,311
-    (21, 30, 12000),   # Currently: 50,693
-    (31, 40, 12000),   # Currently: 55,177
-    (41, 50, 12000),   # Currently: 34,289
-    (51, 60, 12000),   # Currently: 17,007
-    (61, 70, 12000),   # Currently: 8,502
-    (71, 80, 12000),   # Currently: 3,490
-    (81, 90, 12000),   # Currently: 1,224
-    (91, 100, 10000),  # Currently: 191 (lower target for extreme ages)
+    (1, 10, 8000),    # Currently: 2,748
+    (11, 20, 8000),   # Currently: 12,311
+    (21, 30, 8000),   # Currently: 50,693
+    (31, 40, 8000),   # Currently: 55,177
+    (41, 50, 8000),   # Currently: 34,289
+    (51, 60, 8000),   # Currently: 17,007
+    (61, 70, 8000),   # Currently: 8,502
+    (71, 80, 8000),   # Currently: 3,490
+    (81, 90, 8000),   # Currently: 1,224
+    (91, 100, 8000),  # Currently: 191
 ]
 
 balanced_dfs = []
@@ -75,6 +75,9 @@ balanced_distribution = images['Age'].value_counts().sort_index()
 
 print(f"\nBalanced dataset size: {len(images)} images")
 print("=== Data Balancing Completed ===\n")
+
+# Split into train and test sets
+train_df, test_df = train_test_split(images, train_size=0.7, shuffle=True, random_state=1)
 
 # Visualization: Before vs After Distribution
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
@@ -207,11 +210,11 @@ model.compile(
     loss='mse'
 )
 
-# Train Model
+# Train Model (Reduced epochs for faster training)
 history = model.fit(
     train_images,
     validation_data=val_images,
-    epochs=74
+    epochs=20  # Reduced from 74 to ~5-6 hours
 )
 
 # Save Model
