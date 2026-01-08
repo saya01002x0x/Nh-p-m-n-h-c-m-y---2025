@@ -1,0 +1,13 @@
+name: env_machine
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - tensorflow
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - opencv
+  - pillow
+  - pip

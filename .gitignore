@@ -1,0 +1,28 @@
+# System Files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE Settings
+.idea/
+.vscode/
+*.swp
+
+# Virtual Environments
+venv/
+env/
+.env
+
+dataset/
+Source_code/dataset/
+
+models/
+*.h5
+*.pth
+*.pt
+*.onnx
+
