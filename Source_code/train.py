@@ -176,15 +176,28 @@ test_images = test_generator.flow_from_dataframe(
     validate_filenames=True,
 )
 
-# Create Model
+# Create Model with BatchNormalization and Dropout
 inputs = tf.keras.Input(shape=(120, 120, 3))
+
+# Conv Block 1
 x = tf.keras.layers.Conv2D(filters=16, kernel_size=(3, 3), activation='relu')(inputs)
+x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
-x = tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), activation='relu')(x)
+
+# Conv Block 2 - Increased filters to 64
+x = tf.keras.layers.Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
+
+# Flatten & Regularization
 x = tf.keras.layers.GlobalAveragePooling2D()(x)
+x = tf.keras.layers.Dropout(0.3)(x)  # Dropout to reduce overfitting
+
+# Dense Layers
 x = tf.keras.layers.Dense(64, activation='relu')(x)
 x = tf.keras.layers.Dense(64, activation='relu')(x)
+
+# Output
 outputs = tf.keras.layers.Dense(1, activation='linear')(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs)

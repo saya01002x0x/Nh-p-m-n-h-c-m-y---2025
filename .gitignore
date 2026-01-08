@@ -26,3 +26,6 @@ models/
 *.pt
 *.onnx
 
+# Experiments (Hyperparameter tuning results)
+experiments/
+imgs/
