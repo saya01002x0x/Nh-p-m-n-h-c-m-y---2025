@@ -1,59 +1,112 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import os.path
-
-from sklearn.model_selection import train_test_split
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox
 from tensorflow import keras
-import tensorflow as tf
+from sklearn.metrics import r2_score, mean_squared_error
 
-from sklearn.metrics import r2_score
+# Setup Tkinter for file dialog
+root = tk.Tk()
+root.withdraw()  # Hide the main window
 
-# Load Model
-model = keras.models.load_model('D:/chuyen_nganh/20221/machine_learning/project/Nhap_mom_ML-hao/Nhap_mom_ML-hao/models4')
-print('ok')
+# 1. Load Model
+model_path = os.path.join(os.path.dirname(__file__), 'models', 'age_model.keras')
+if not os.path.exists(model_path):
+    print(f"❌ Model not found at: {model_path}")
+    print("Please train the model first or place 'age_model.keras' in the 'models' folder.")
+    exit()
 
-# Load images from folder
-image_dir = Path('D:/chuyen_nganh/20221/machine_learning/project/Nhap_mom_ML-hao/Nhap_mom_ML-hao/age_prediction/train/025')
-filepaths = pd.Series(list(image_dir.glob(r'*.jpg')), name='Filepath').astype(str)
-ages = pd.Series(filepaths.apply(lambda x: os.path.split(os.path.split(x)[0])[1]), name='Age').astype(np.int)
-images = pd.concat([filepaths, ages], axis=1).sample(frac=1.0, random_state=1).reset_index(drop=True)
+print(f"🔄 Loading model from: {model_path}...")
+try:
+    model = keras.models.load_model(model_path)
+    print("✅ Model loaded successfully!")
+except Exception as e:
+    print(f"❌ Failed to load model: {e}")
+    exit()
 
+# 2. Select Test Data Directory
+print("\n👉 Please select a folder containing images to test (e.g., a folder named '25' containing images of 25-year-olds).")
+test_dir = filedialog.askdirectory(title="Select Folder with Test Images")
 
-# Load images
-# image_dir = Path('D:/chuyen_nganh/20221/machine_learning/project/Nhap_mom_ML-hao/Nhap_mom_ML-hao/age_prediction/test/047')
-# filepaths = pd.Series((image_dir), name='Filepath').astype(str)
-# ages = pd.Series(name='Age')
-# images = pd.concat([filepaths, ages], axis=1).sample(frac=1.0, random_state=1).reset_index(drop=True)
+if not test_dir:
+    print("❌ No folder selected. Exiting.")
+    exit()
 
-# Create ImageDataGenerator
-train_generator = tf.keras.preprocessing.image.ImageDataGenerator(
-    rescale=1./255
-)
+print(f"📂 Selected folder: {test_dir}")
 
-# Change images to dataframe
-test_images = train_generator.flow_from_dataframe(
-    dataframe=images,
+# 3. Load Images
+image_dir = Path(test_dir)
+filepaths = pd.Series(list(image_dir.glob(r'*.jpg')) + list(image_dir.glob(r'*.png')) + list(image_dir.glob(r'*.jpeg')), name='Filepath').astype(str)
+
+if filepaths.empty:
+    print("❌ No images found in selected folder (looking for .jpg, .png, .jpeg).")
+    exit()
+
+# Try to extract true age from folder name (assuming folder name is the age, e.g., '25')
+try:
+    folder_name = os.path.basename(test_dir)
+    true_age_val = int(folder_name)
+    print(f"ℹ️ Assuming true age is {true_age_val} based on folder name.")
+    ages = pd.Series([true_age_val] * len(filepaths), name='Age')
+except ValueError:
+    print("⚠️ Folder name is not an integer. Cannot determine true age from folder name.")
+    print("   Setting true age to 0 (metrics like RMSE/R2 will be invalid, but predictions will work).")
+    ages = pd.Series([0] * len(filepaths), name='Age')
+
+images_df = pd.concat([filepaths, ages], axis=1)
+
+# 4. Create Data Generator
+test_generator = keras.preprocessing.image.ImageDataGenerator(rescale=1./255)
+
+test_images = test_generator.flow_from_dataframe(
+    dataframe=images_df,
     x_col='Filepath',
     y_col='Age',
     target_size=(120, 120),
     color_mode='rgb',
     class_mode='raw',
-    batch_size=64,
-    shuffle=False
+    batch_size=32,
+    shuffle=False 
 )
 
-# Predict images
-# print(model.evaluate(test_images, verbose=2))
-predicted_ages = np.squeeze(model.predict(test_images))
-true_ages = test_images.labels
+# 5. Predict
+print("\n🔮 Predicting...")
+predictions = model.predict(test_images)
+predicted_ages = np.squeeze(predictions)
 
-# rmse = np.sqrt(model.evaluate(test_images, verbose=0))
-# print("     Test RMSE: {:.5f}".format(rmse))
-#
-# r2 = r2_score(true_ages, predicted_ages)
-# print("Test R^2 Score: {:.5f}".format(r2))
-print(predicted_ages)
-print(np.mean(predicted_ages))
-# print(true_ages[0:100])
-# print(model.evaluate(test_images, verbose=1))
+# 6. Show Results
+print("\n" + "="*40)
+print("             RESULTS             ")
+print("="*40)
+print(f"Input Folder: {test_dir}")
+print(f"Number of Images: {len(predicted_ages)}")
+print("-" * 40)
+print(f"Average Predicted Age: {np.mean(predicted_ages):.2f}")
+print(f"Min Predicted Age:     {np.min(predicted_ages):.2f}")
+print(f"Max Predicted Age:     {np.max(predicted_ages):.2f}")
+print("-" * 40)
+
+# 7. Calculate Metrics (if true age is valid)
+if true_age_val > 0:
+    true_ages = images_df['Age'].values
+    
+    mse = mean_squared_error(true_ages, predicted_ages)
+    rmse = np.sqrt(mse)
+    mae = np.mean(np.abs(true_ages - predicted_ages))
+    
+    print(f"True Age (from folder): {true_age_val}")
+    print(f"RMSE (Root Mean Squared Error): {rmse:.2f}")
+    print(f"MAE (Mean Absolute Error):      {mae:.2f}")
+    
+    # R2 might not be meaningful if variance of true_ages is 0 (all same age), but printing anyway
+    # r2 = r2_score(true_ages, predicted_ages) 
+    # print(f"R2 Score: {r2:.5f}")
+
+print("="*40)
+
+# Optional: List individual predictions
+# print("\nIndividual Predictions:")
+# for i, age in enumerate(predicted_ages):
+#     print(f"Image {i+1}: {age:.1f}")
