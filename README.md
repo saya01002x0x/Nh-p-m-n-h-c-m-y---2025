@@ -3,7 +3,7 @@
 ## 1. Chuẩn bị
 1. **Clone repo**:
    ```bash
-   git clone https://github.com/TruongVanHien194276/Project_IT3190_Team1.git
+   git clone https://github.com/saya01002x0x/Nh-p-m-n-h-c-m-y---2025
    ```
 2. **Download Dataset**:
    - Tải dataset từ Kaggle: [Age prediction](https://www.kaggle.com/) (hoặc nguồn tương ứng).
