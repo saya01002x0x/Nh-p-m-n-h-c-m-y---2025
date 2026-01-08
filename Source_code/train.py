@@ -117,7 +117,10 @@ test_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rescale=1./255
 )
 
-# Change iamges to dataframe
+# Optimized batch size for 32GB RAM (256 instead of 64)
+BATCH_SIZE = 256
+
+# Change images to dataframe
 train_images = train_generator.flow_from_dataframe(
     dataframe=train_df,
     directory=None,
@@ -149,7 +152,7 @@ val_images = train_generator.flow_from_dataframe(
     color_mode='rgb',
     classes=None,
     class_mode='raw',
-    batch_size=64,
+    batch_size=BATCH_SIZE,
     shuffle=True,
     seed=42,
     save_to_dir=None,
@@ -170,7 +173,7 @@ test_images = test_generator.flow_from_dataframe(
     color_mode='rgb',
     classes=None,
     class_mode='raw',
-    batch_size=64,
+    batch_size=BATCH_SIZE,
     shuffle=False,
     save_to_dir=None,
     save_prefix='',
@@ -187,8 +190,13 @@ x = tf.keras.layers.Conv2D(filters=16, kernel_size=(3, 3), activation='relu')(in
 x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
 
-# Conv Block 2 - Increased filters to 64
+# Conv Block 2 - 64 filters
 x = tf.keras.layers.Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+x = tf.keras.layers.BatchNormalization()(x)
+x = tf.keras.layers.MaxPool2D()(x)
+
+# Conv Block 3 - 128 filters (NEW! Deeper model for better accuracy)
+x = tf.keras.layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu')(x)
 x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
 
@@ -196,8 +204,8 @@ x = tf.keras.layers.MaxPool2D()(x)
 x = tf.keras.layers.GlobalAveragePooling2D()(x)
 x = tf.keras.layers.Dropout(0.3)(x)  # Dropout to reduce overfitting
 
-# Dense Layers
-x = tf.keras.layers.Dense(64, activation='relu')(x)
+# Dense Layers (increased capacity)
+x = tf.keras.layers.Dense(128, activation='relu')(x)
 x = tf.keras.layers.Dense(64, activation='relu')(x)
 
 # Output
@@ -210,17 +218,43 @@ model.compile(
     loss='mse'
 )
 
-# Train Model (Reduced epochs for faster training)
+# Callbacks for better training
+early_stop = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss',
+    patience=5,  # Wait 5 epochs before stopping (increased for deeper model)
+    restore_best_weights=True,
+    verbose=1
+)
+
+# NEW! Reduce learning rate when loss plateaus
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.5,       # Reduce LR by half
+    patience=2,       # Wait 2 epochs before reducing
+    min_lr=0.00001,   # Don't go below this
+    verbose=1
+)
+
+print("\n🚀 Starting training with optimizations:")
+print(f"   - Batch size: {BATCH_SIZE}")
+print(f"   - Max epochs: 20")
+print(f"   - Model: 3 Conv layers (16→64→128 filters)")
+print(f"   - Early stopping enabled (patience=5)")
+print(f"   - ReduceLROnPlateau enabled\n")
+
 history = model.fit(
     train_images,
     validation_data=val_images,
-    epochs=20  # Reduced from 74 to ~5-6 hours
+    epochs=20,  # More epochs since we have LR reduction
+    callbacks=[early_stop, reduce_lr],
+    verbose=1
 )
 
-# Save Model
-model_save_path = os.path.join(os.path.dirname(__file__), 'models')
+# Save Model (Keras 3 requires .keras extension)
+model_save_path = os.path.join(os.path.dirname(__file__), 'models', 'age_model.keras')
+os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
 model.save(model_save_path)
-print(f"\nModel saved to: {model_save_path}")
+print(f"\n✅ Model saved to: {model_save_path}")
 
 # Predict test images
 predicted_ages = np.squeeze(model.predict(test_images))

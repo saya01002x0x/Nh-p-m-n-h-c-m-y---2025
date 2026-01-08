@@ -1,4 +1,5 @@
 import cv2
+import os
 import tkinter as tk
 from tkinter import *
 from PIL import Image,ImageTk
@@ -45,13 +46,13 @@ def createwidgets():
     ShowFeed()
 
 # Defining ShowFeed() function to display webcam feed in the cameraLabel
-# Initialize FPS tracking
-if not hasattr(root, 'fps_start_time'):
-    root.fps_start_time = datetime.now()
-    root.fps_frame_count = 0
-    root.fps_display = 0.0
-
 def ShowFeed():
+    # Initialize FPS tracking (only once)
+    if not hasattr(root, 'fps_start_time'):
+        root.fps_start_time = datetime.now()
+        root.fps_frame_count = 0
+        root.fps_display = 0.0
+    
     # Capturing frame by frame
     ret, frame = root.cap.read()
 
@@ -119,7 +120,7 @@ def imageBrowse():
     imageView = Image.open(root.openDirectory)
     
     # Resizing the image using Image.resize()
-    imageResize = imageView.resize((640, 480), Image.ANTIALIAS)
+    imageResize = imageView.resize((640, 480), Image.Resampling.LANCZOS)
 
     # Creating object of PhotoImage() class to display the frame
     imageDisplay = ImageTk.PhotoImage(imageResize)
@@ -217,7 +218,7 @@ def StartPredict():
     canvas = detect(rgb, gray)
 
     predict_image = Image.fromarray(canvas)
-    predict_image = predict_image.resize((250, 250), Image.ANTIALIAS)
+    predict_image = predict_image.resize((250, 250), Image.Resampling.LANCZOS)
     # Creating object of PhotoImage() class to display the frame
     predict_image = ImageTk.PhotoImage(predict_image)
 
@@ -253,9 +254,6 @@ root.configure(background = "sky blue")
 
 # Creating tkinter variables
 imagePath = StringVar()
-
-# Import os for path operations
-import os
 
 createwidgets()
 root.mainloop()
