@@ -117,7 +117,7 @@ test_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rescale=1./255
 )
 
-# Optimized batch size for 32GB RAM (256 instead of 64)
+# Optimized batch size
 BATCH_SIZE = 256
 
 # Change images to dataframe
@@ -195,7 +195,7 @@ x = tf.keras.layers.Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
 x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
 
-# Conv Block 3 - 128 filters (NEW! Deeper model for better accuracy)
+# Conv Block 3 - 128 filters 
 x = tf.keras.layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu')(x)
 x = tf.keras.layers.BatchNormalization()(x)
 x = tf.keras.layers.MaxPool2D()(x)
@@ -226,7 +226,7 @@ early_stop = tf.keras.callbacks.EarlyStopping(
     verbose=1
 )
 
-# NEW! Reduce learning rate when loss plateaus
+# Reduce learning rate when loss plateaus
 reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
     monitor='val_loss',
     factor=0.5,       # Reduce LR by half

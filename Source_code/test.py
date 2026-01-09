@@ -2,14 +2,9 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import os
-import tkinter as tk
-from tkinter import filedialog, messagebox
 from tensorflow import keras
-from sklearn.metrics import r2_score, mean_squared_error
-
-# Setup Tkinter for file dialog
-root = tk.Tk()
-root.withdraw()  # Hide the main window
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import matplotlib.pyplot as plt
 
 # 1. Load Model
 model_path = os.path.join(os.path.dirname(__file__), 'models', 'age_model.keras')
@@ -21,92 +16,153 @@ if not os.path.exists(model_path):
 print(f"🔄 Loading model from: {model_path}...")
 try:
     model = keras.models.load_model(model_path)
-    print("✅ Model loaded successfully!")
+    print("✅ Model loaded successfully!\n")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
     exit()
 
-# 2. Select Test Data Directory
-print("\n👉 Please select a folder containing images to test (e.g., a folder named '25' containing images of 25-year-olds).")
-test_dir = filedialog.askdirectory(title="Select Folder with Test Images")
+# 2. Set Test Data Directory (relative path from Source_code)
+test_base_dir = Path(os.path.dirname(__file__)) / 'dataset' / 'age_prediction_up' / 'test'
 
-if not test_dir:
-    print("❌ No folder selected. Exiting.")
+if not test_base_dir.exists():
+    print(f"❌ Test directory not found: {test_base_dir}")
+    print("Please ensure the dataset is in the correct location.")
     exit()
 
-print(f"📂 Selected folder: {test_dir}")
+print(f"📂 Test directory: {test_base_dir}\n")
 
-# 3. Load Images
-image_dir = Path(test_dir)
-filepaths = pd.Series(list(image_dir.glob(r'*.jpg')) + list(image_dir.glob(r'*.png')) + list(image_dir.glob(r'*.jpeg')), name='Filepath').astype(str)
+# 3. Scan all age folders (001, 002, 003, ...)
+age_folders = sorted([f for f in test_base_dir.iterdir() if f.is_dir()])
 
-if filepaths.empty:
-    print("❌ No images found in selected folder (looking for .jpg, .png, .jpeg).")
+if not age_folders:
+    print("❌ No age folders found in test directory.")
     exit()
 
-# Try to extract true age from folder name (assuming folder name is the age, e.g., '25')
-try:
-    folder_name = os.path.basename(test_dir)
-    true_age_val = int(folder_name)
-    print(f"ℹ️ Assuming true age is {true_age_val} based on folder name.")
-    ages = pd.Series([true_age_val] * len(filepaths), name='Age')
-except ValueError:
-    print("⚠️ Folder name is not an integer. Cannot determine true age from folder name.")
-    print("   Setting true age to 0 (metrics like RMSE/R2 will be invalid, but predictions will work).")
-    ages = pd.Series([0] * len(filepaths), name='Age')
+print(f"Found {len(age_folders)} age folders to test.\n")
 
-images_df = pd.concat([filepaths, ages], axis=1)
+# 4. Prepare data structures
+all_predictions = []
+all_true_ages = []
+all_filepaths = []
 
-# 4. Create Data Generator
+# Create ImageDataGenerator
 test_generator = keras.preprocessing.image.ImageDataGenerator(rescale=1./255)
 
-test_images = test_generator.flow_from_dataframe(
-    dataframe=images_df,
-    x_col='Filepath',
-    y_col='Age',
-    target_size=(120, 120),
-    color_mode='rgb',
-    class_mode='raw',
-    batch_size=32,
-    shuffle=False 
-)
+# 5. Process each age folder
+print("="*60)
+print("TESTING EACH AGE GROUP")
+print("="*60)
 
-# 5. Predict
-print("\n🔮 Predicting...")
-predictions = model.predict(test_images)
-predicted_ages = np.squeeze(predictions)
-
-# 6. Show Results
-print("\n" + "="*40)
-print("             RESULTS             ")
-print("="*40)
-print(f"Input Folder: {test_dir}")
-print(f"Number of Images: {len(predicted_ages)}")
-print("-" * 40)
-print(f"Average Predicted Age: {np.mean(predicted_ages):.2f}")
-print(f"Min Predicted Age:     {np.min(predicted_ages):.2f}")
-print(f"Max Predicted Age:     {np.max(predicted_ages):.2f}")
-print("-" * 40)
-
-# 7. Calculate Metrics (if true age is valid)
-if true_age_val > 0:
-    true_ages = images_df['Age'].values
+for age_folder in age_folders:
+    folder_name = age_folder.name
     
-    mse = mean_squared_error(true_ages, predicted_ages)
-    rmse = np.sqrt(mse)
-    mae = np.mean(np.abs(true_ages - predicted_ages))
+    # Extract true age from folder name (e.g., "025" -> 25)
+    try:
+        true_age = int(folder_name)
+    except ValueError:
+        print(f"⚠️ Skipping folder '{folder_name}' (not a valid age number)")
+        continue
     
-    print(f"True Age (from folder): {true_age_val}")
-    print(f"RMSE (Root Mean Squared Error): {rmse:.2f}")
-    print(f"MAE (Mean Absolute Error):      {mae:.2f}")
+    # Get all images in this folder
+    image_files = list(age_folder.glob('*.jpg')) + list(age_folder.glob('*.png')) + list(age_folder.glob('*.jpeg'))
     
-    # R2 might not be meaningful if variance of true_ages is 0 (all same age), but printing anyway
-    # r2 = r2_score(true_ages, predicted_ages) 
-    # print(f"R2 Score: {r2:.5f}")
+    if not image_files:
+        print(f"⚠️ Age {true_age:3d}: No images found, skipping.")
+        continue
+    
+    # Create dataframe for this age group
+    filepaths = pd.Series([str(f) for f in image_files], name='Filepath')
+    ages = pd.Series([true_age] * len(filepaths), name='Age')
+    df = pd.concat([filepaths, ages], axis=1)
+    
+    # Create data generator
+    test_images = test_generator.flow_from_dataframe(
+        dataframe=df,
+        x_col='Filepath',
+        y_col='Age',
+        target_size=(120, 120),
+        color_mode='rgb',
+        class_mode='raw',
+        batch_size=32,
+        shuffle=False
+    )
+    
+    # Predict
+    predictions = model.predict(test_images, verbose=0)
+    predicted_ages = np.atleast_1d(np.squeeze(predictions))  # Ensure it's always an array
+    
+    # Calculate metrics for this age group
+    mae = mean_absolute_error([true_age] * len(predicted_ages), predicted_ages)
+    avg_pred = np.mean(predicted_ages)
+    
+    print(f"Age {true_age:3d}: {len(image_files):4d} images | Avg Pred: {avg_pred:5.1f} | MAE: {mae:5.2f}")
+    
+    # Store results
+    all_predictions.extend(predicted_ages)
+    all_true_ages.extend([true_age] * len(predicted_ages))
+    all_filepaths.extend([str(f) for f in image_files])
 
-print("="*40)
+# 6. Overall Results
+print("\n" + "="*60)
+print("OVERALL RESULTS")
+print("="*60)
 
-# Optional: List individual predictions
-# print("\nIndividual Predictions:")
-# for i, age in enumerate(predicted_ages):
-#     print(f"Image {i+1}: {age:.1f}")
+all_predictions = np.array(all_predictions)
+all_true_ages = np.array(all_true_ages)
+
+overall_mae = mean_absolute_error(all_true_ages, all_predictions)
+overall_rmse = np.sqrt(mean_squared_error(all_true_ages, all_predictions))
+overall_r2 = r2_score(all_true_ages, all_predictions)
+
+print(f"Total Images Tested: {len(all_predictions)}")
+print(f"MAE (Mean Absolute Error):  {overall_mae:.2f} years")
+print(f"RMSE (Root Mean Squared Error): {overall_rmse:.2f} years")
+print(f"R² Score: {overall_r2:.4f}")
+print("="*60)
+
+# 7. Visualization: Aggregated Performance Plot (hides dataset size)
+# Group predictions by age bins to show trend without revealing exact data points
+age_bins = np.arange(0, 101, 5)  # Bins: 0-5, 5-10, ..., 95-100
+bin_centers = []
+bin_avg_predictions = []
+bin_std_predictions = []
+
+for i in range(len(age_bins) - 1):
+    start, end = age_bins[i], age_bins[i+1]
+    mask = (all_true_ages >= start) & (all_true_ages < end)
+    
+    if mask.sum() > 0:
+        bin_centers.append((start + end) / 2)
+        bin_avg_predictions.append(np.mean(all_predictions[mask]))
+        bin_std_predictions.append(np.std(all_predictions[mask]))
+
+bin_centers = np.array(bin_centers)
+bin_avg_predictions = np.array(bin_avg_predictions)
+bin_std_predictions = np.array(bin_std_predictions)
+
+plt.figure(figsize=(10, 8))
+
+# Plot average prediction with error bars
+plt.errorbar(bin_centers, bin_avg_predictions, yerr=bin_std_predictions, 
+             fmt='o-', linewidth=2, markersize=8, capsize=5, 
+             color='steelblue', ecolor='lightblue', label='Model Prediction (Avg ± Std)')
+
+# Perfect prediction line
+plt.plot([0, 100], [0, 100], 'r--', linewidth=2, label='Perfect Prediction')
+
+plt.xlabel('True Age Group (Center)', fontsize=13, fontweight='bold')
+plt.ylabel('Predicted Age', fontsize=13, fontweight='bold')
+plt.title(f'Age Prediction Performance by Age Group\nMAE: {overall_mae:.2f} | RMSE: {overall_rmse:.2f}', 
+          fontsize=15, fontweight='bold')
+plt.legend(fontsize=11)
+plt.grid(alpha=0.3)
+plt.xlim(0, 100)
+plt.ylim(0, 100)
+plt.tight_layout()
+
+output_plot = os.path.join(os.path.dirname(__file__), 'test_results.png')
+plt.savefig(output_plot, dpi=150, bbox_inches='tight')
+print(f"\n📊 Results plot saved to: {output_plot}")
+plt.close()
+
+print("\n✅ Testing completed!")

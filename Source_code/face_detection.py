@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from tensorflow import keras
 
-# Load Model (New trained model with val_loss: 168)
+# Load Model 
 import os
 model_path = os.path.join(os.path.dirname(__file__), 'models', 'age_model.keras')
 if not os.path.exists(model_path):
