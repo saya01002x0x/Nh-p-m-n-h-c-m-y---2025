@@ -9,38 +9,129 @@ from face_detection import detect
 
 
 # Defining CreateWidgets() function to create necessary tkinter widgets
-# Defining CreateWidgets() function to create necessary tkinter widgets
 def createwidgets():
-    root.feedlabel = Label(root, bg="steelblue", fg="white", text="WEBCAM FEED", font=('Comic Sans MS',20))
-    root.feedlabel.grid(row=1, column=1, padx=10, pady=10, columnspan=2)
-
-    root.cameraLabel = Label(root, bg="steelblue", borderwidth=3, relief="groove")
-    root.cameraLabel.grid(row=2, column=1, padx=10, pady=10, columnspan=2)
-
-    # Auto-save info label (removed browse functionality)
-    auto_save_info = Label(root, text="Images auto-saved to: imgs/", bg="steelblue", fg="white", font=('Comic Sans MS', 10))
-    auto_save_info.grid(row=3, column=1, padx=10, pady=10, columnspan=2)
-
-    root.captureBTN = Button(root, text="CAPTURE", command=Capture, bg="LIGHTBLUE", font=('Comic Sans MS',15), width=20)
-    root.captureBTN.grid(row=4, column=1, padx=10, pady=10)
-
-    root.CAMBTN = Button(root, text="STOP CAMERA", command=StopCAM, bg="LIGHTBLUE", font=('Comic Sans MS',15), width=13)
-    root.CAMBTN.grid(row=4, column=2)
-
-    root.previewlabel = Label(root, bg="steelblue", fg="white", text="IMAGE PREVIEW", font=('Comic Sans MS',20))
-    root.previewlabel.grid(row=1, column=4, padx=10, pady=10, columnspan=2)
-
-    root.imageLabel = Label(root, bg="steelblue", borderwidth=3, relief="groove")
-    root.imageLabel.grid(row=2, column=4, padx=10, pady=10, columnspan=2)
-
-    root.openImageEntry = Entry(root, width=55, textvariable=imagePath)
-    root.openImageEntry.grid(row=3, column=4, padx=10, pady=10)
-
-    root.openImageButton = Button(root, width=10, text="BROWSE", command=imageBrowse)
-    root.openImageButton.grid(row=3, column=5, padx=10, pady=10)
+    # Title Bar with modern design
+    title_frame = Frame(root, bg="#2c5f8d", height=100)
+    title_frame.grid(row=0, column=0, columnspan=4, sticky="ew", padx=0, pady=0)
     
-    root.startPredict = Button(root, text="START PREDICT", command=StartPredict, bg="LIGHTBLUE", font=('Comic Sans MS',15), width=20)
-    root.startPredict.grid(row=4, column=5, padx=10, pady=10)
+    # Icon and title container
+    title_container = Frame(title_frame, bg="#2c5f8d")
+    title_container.pack(expand=True)
+    
+    title_label = Label(title_container, text="AGE DETECTION SYSTEM", 
+                        bg="#2c5f8d", fg="white", 
+                        font=('Segoe UI', 32, 'bold'))
+    title_label.pack(pady=(15, 5))
+    
+    subtitle_label = Label(title_container, text="Real-time Face & Age Recognition", 
+                          bg="#2c5f8d", fg="#c8e0f4", 
+                          font=('Segoe UI', 12))
+    subtitle_label.pack(pady=(0, 15))
+    
+    # Left Panel - Camera Feed with rounded corners
+    left_panel = Frame(root, bg="#4a7ba7", relief="raised", borderwidth=3)
+    left_panel.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
+    
+    camera_header = Frame(left_panel, bg="#4a7ba7", height=50)
+    camera_header.pack(fill="x", padx=15, pady=(15, 10))
+    
+    root.feedlabel = Label(camera_header, bg="#4a7ba7", fg="white", 
+                           text="───  CAMERA FEED  ───", 
+                           font=('Segoe UI', 14, 'bold'))
+    root.feedlabel.pack(anchor="center")
+
+    root.cameraLabel = Label(left_panel, bg="#2c3e50", borderwidth=0)
+    root.cameraLabel.pack(padx=15, pady=10)
+    
+    # Right Panel - Image Preview with rounded corners
+    right_panel = Frame(root, bg="#5a8fb7", relief="raised", borderwidth=3)
+    right_panel.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
+    
+    preview_header = Frame(right_panel, bg="#5a8fb7", height=50)
+    preview_header.pack(fill="x", padx=15, pady=(15, 10))
+    
+    root.previewlabel = Label(preview_header, bg="#5a8fb7", fg="white", 
+                             text="───  IMAGE PREVIEW  ───", 
+                             font=('Segoe UI', 14, 'bold'))
+    root.previewlabel.pack(anchor="center")
+
+    # Create a container for the image with dashed border
+    image_container = Frame(right_panel, bg="#c8ddef", width=660, height=500)
+    image_container.pack(padx=15, pady=10)
+    image_container.pack_propagate(False)
+    
+    # Dashed border frame
+    dashed_frame = Frame(image_container, bg="#c8ddef", 
+                        highlightbackground="#8ab4d4", 
+                        highlightthickness=2, 
+                        highlightcolor="#8ab4d4",
+                        relief="flat")
+    dashed_frame.place(relx=0.5, rely=0.5, anchor="center", 
+                      width=640, height=480)
+    
+    root.imageLabel = Label(dashed_frame, bg="#c8ddef", 
+                           text="No image selected", 
+                           fg="#7a9db8", 
+                           font=('Segoe UI', 16, 'italic'),
+                           borderwidth=0)
+    root.imageLabel.place(relx=0.5, rely=0.5, anchor="center")
+
+    # Browse button centered below preview
+    root.openImageButton = Button(right_panel, width=18, text="BROWSE", 
+                                 command=imageBrowse,
+                                 bg="#7db3da", fg="white",
+                                 font=('Segoe UI', 10, 'bold'),
+                                 relief="raised", borderwidth=1,
+                                 activebackground="#6ba3d0",
+                                 cursor="hand2", pady=8)
+    root.openImageButton.pack(pady=(5, 15))
+    
+    # Bottom buttons frame
+    button_frame = Frame(root, bg="#d4e8f7")
+    button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=40, pady=20)
+    
+    # Configure grid for button frame
+    button_frame.grid_columnconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(1, weight=1)
+    button_frame.grid_columnconfigure(2, weight=1)
+    button_frame.grid_columnconfigure(3, weight=1)
+    
+    root.captureBTN = Button(button_frame, text="CAPTURE", command=Capture, 
+                            bg="#5a8fb7", fg="white", 
+                            font=('Segoe UI', 14, 'bold'), 
+                            width=18, height=2,
+                            relief="raised", borderwidth=3,
+                            activebackground="#4a7ba7", 
+                            cursor="hand2")
+    root.captureBTN.grid(row=0, column=0, padx=8, pady=10)
+
+    root.CAMBTN = Button(button_frame, text="STOP CAMERA", command=StopCAM, 
+                        bg="#c85a5a", fg="white", 
+                        font=('Segoe UI', 14, 'bold'), 
+                        width=18, height=2,
+                        relief="raised", borderwidth=3,
+                        activebackground="#b04545", 
+                        cursor="hand2")
+    root.CAMBTN.grid(row=0, column=1, padx=8, pady=10)
+    
+    browse_btn = Button(button_frame, text="BROWSE", command=imageBrowse,
+                       bg="#5a8fb7", fg="white",
+                       font=('Segoe UI', 14, 'bold'),
+                       width=18, height=2,
+                       relief="raised", borderwidth=3,
+                       activebackground="#4a7ba7",
+                       cursor="hand2")
+    browse_btn.grid(row=0, column=2, padx=8, pady=10)
+    
+    root.startPredict = Button(button_frame, text="START PREDICT", 
+                              command=StartPredict, 
+                              bg="#4db89a", fg="white", 
+                              font=('Segoe UI', 14, 'bold'), 
+                              width=18, height=2,
+                              relief="raised", borderwidth=3,
+                              activebackground="#3ea085",
+                              cursor="hand2")
+    root.startPredict.grid(row=0, column=3, padx=8, pady=10)
 
     # Calling ShowFeed() function
     ShowFeed()
@@ -69,12 +160,16 @@ def ShowFeed():
         # Flipping the frame vertically
         frame = cv2.flip(frame, 1)
 
-        # Display FPS at top-left corner
+        # Display FPS at top-left corner with background
         fps_text = f"FPS: {root.fps_display:.1f}"
-        cv2.putText(frame, fps_text, (10, 25), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 255, 255), 2)
+        # Add black background for better visibility
+        cv2.rectangle(frame, (5, 5), (140, 45), (0, 0, 0), -1)
+        cv2.putText(frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
         
-        # Displaying date and time on the feed
-        cv2.putText(frame, datetime.now().strftime('%d/%m/%Y %H:%M:%S'), (10, 55), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0,255,255), 1)
+        # Displaying date and time on the feed with background
+        time_text = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        cv2.rectangle(frame, (5, 50), (240, 82), (0, 0, 0), -1)
+        cv2.putText(frame, time_text, (10, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2, cv2.LINE_AA)
 
         # Changing the frame color from BGR to RGB
         cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
@@ -112,24 +207,24 @@ def imageBrowse():
     # Setting the initialdir argument is optional. SET IT TO YOUR DIRECTORY PATH
     root.openDirectory = filedialog.askopenfilename(initialdir="YOUR DIRECTORY PATH")
     
-    # Displaying the directory in the directory textbox
-    imagePath.set(root.openDirectory)
-    print('test')
-    print(imagePath)
-    # Opening the saved image using the open() of Image class which takes the saved image as the argument
-    imageView = Image.open(root.openDirectory)
-    
-    # Resizing the image using Image.resize()
-    imageResize = imageView.resize((640, 480), Image.Resampling.LANCZOS)
+    if root.openDirectory:  # Check if user selected a file
+        # Displaying the directory in the directory textbox
+        imagePath.set(root.openDirectory)
+        
+        # Opening the saved image using the open() of Image class which takes the saved image as the argument
+        imageView = Image.open(root.openDirectory)
+        
+        # Resizing the image using Image.resize()
+        imageResize = imageView.resize((640, 480), Image.Resampling.LANCZOS)
 
-    # Creating object of PhotoImage() class to display the frame
-    imageDisplay = ImageTk.PhotoImage(imageResize)
+        # Creating object of PhotoImage() class to display the frame
+        imageDisplay = ImageTk.PhotoImage(imageResize)
 
-    # Configuring the label to display the frame
-    root.imageLabel.config(image=imageDisplay)
+        # Configuring the label to display the frame
+        root.imageLabel.config(image=imageDisplay, text="", bg="#c8ddef")
 
-    # Keeping a reference
-    root.imageLabel.photo = imageDisplay
+        # Keeping a reference
+        root.imageLabel.photo = imageDisplay
 
 # Defining Capture() to capture and save the image and display the image in the imageLabel
 def Capture():
@@ -162,7 +257,7 @@ def Capture():
     saved_image = ImageTk.PhotoImage(saved_image)
 
     # Configuring the label to display the frame
-    root.imageLabel.config(image=saved_image)
+    root.imageLabel.config(image=saved_image, text="", bg="#c8ddef")
 
     # Keeping a reference
     root.imageLabel.photo = saved_image
@@ -178,10 +273,13 @@ def StopCAM():
     root.cap.release()
 
     # Configuring the CAMBTN to display accordingly
-    root.CAMBTN.config(text="START CAMERA", command=StartCAM)
+    root.CAMBTN.config(text="START CAMERA", command=StartCAM,
+                      bg="#4db89a", activebackground="#3ea085")
 
     # Displaying text message in the camera label
-    root.cameraLabel.config(text="OFF CAM", font=('Comic Sans MS',70))
+    root.cameraLabel.config(text="CAMERA OFF", 
+                           font=('Segoe UI', 32, 'bold'),
+                           fg="#6ba3d0", bg="#2c3e50")
 
 def StartCAM():
     # Creating object of class VideoCapture with webcam index
@@ -193,10 +291,11 @@ def StartCAM():
     root.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height_1)
 
     # Configuring the CAMBTN to display accordingly
-    root.CAMBTN.config(text="STOP CAMERA", command=StopCAM)
+    root.CAMBTN.config(text="STOP CAMERA", command=StopCAM,
+                      bg="#c85a5a", activebackground="#b04545")
 
     # Removing text message from the camera label
-    root.cameraLabel.config(text="")
+    root.cameraLabel.config(text="", bg="#2c3e50")
 
     # Calling the ShowFeed() Function
     ShowFeed()
@@ -218,12 +317,13 @@ def StartPredict():
     canvas = detect(rgb, gray)
 
     predict_image = Image.fromarray(canvas)
-    predict_image = predict_image.resize((250, 250), Image.Resampling.LANCZOS)
+    # Giữ nguyên kích thước như khi browse ảnh (640x480)
+    predict_image = predict_image.resize((640, 480), Image.Resampling.LANCZOS)
     # Creating object of PhotoImage() class to display the frame
     predict_image = ImageTk.PhotoImage(predict_image)
 
     # Configuring the label to display the frame
-    root.imageLabel.config(image=predict_image)
+    root.imageLabel.config(image=predict_image, text="", bg="#c8ddef")
 
     # Keeping a reference
     root.imageLabel.photo = predict_image
@@ -247,10 +347,15 @@ root.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
 root.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
 # Setting the title, window size, background color and disabling the resizing property
-root.title("Pycam")
-root.geometry("1340x700")
+root.title("AGE DETECTION SYSTEM")
+root.geometry("1400x850")
 root.resizable(True, True)
-root.configure(background = "sky blue")
+root.configure(background="#d4e8f7")
+
+# Configure grid weights for responsive design
+root.grid_rowconfigure(1, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
 
 # Creating tkinter variables
 imagePath = StringVar()

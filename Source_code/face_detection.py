@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 from tensorflow import keras
+from collections import deque
 
 # Load Model 
 import os
@@ -23,6 +24,11 @@ print('OK')
 #Loading cascades
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
+
+# Dictionary để lưu lịch sử dự đoán cho mỗi khuôn mặt (smoothing)
+# Key: vị trí khuôn mặt (x, y), Value: deque chứa các dự đoán gần nhất
+age_history = {}
+SMOOTHING_FRAMES = 5  # Số frame để tính trung bình (có thể điều chỉnh: 3-10)
 
 def detect(gray, frame): 
     # We create a function that takes as input the image in black and white (gray) 
@@ -53,21 +59,37 @@ def detect(gray, frame):
         
         # Predict age
         img_predict = test_generator.flow(img_age, batch_size=1, shuffle=False)
-        output_predict = int(np.squeeze(model.predict(img_predict, verbose=0)))
+        current_prediction = int(np.squeeze(model.predict(img_predict, verbose=0)))
         
-        # Age-based color: Green if <30, Red if >=30
-        if output_predict < 30:
-            color = (0, 255, 0)  # Green
-        else:
-            color = (0, 0, 255)  # Red
+        # Tạo key cho khuôn mặt dựa trên vị trí (làm tròn để tránh key khác nhau cho cùng 1 mặt)
+        face_key = (round(x / 50) * 50, round(y / 50) * 50)
+        
+        # Khởi tạo hoặc cập nhật lịch sử dự đoán
+        if face_key not in age_history:
+            age_history[face_key] = deque(maxlen=SMOOTHING_FRAMES)
+        
+        age_history[face_key].append(current_prediction)
+        
+        # Tính tuổi trung bình từ lịch sử
+        output_predict = int(np.mean(age_history[face_key]))
+        
+        # Màu cho khung và chữ (RGBA format vì frame đã được convert sang RGBA)
+        rectangle_color = (255, 255, 255, 255)  # Trắng cho khung
+        text_color = (255, 255, 0, 255)  # Vàng cho chữ (R=255, G=255, B=0)
         
         # Draw rectangle
-        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), rectangle_color, 3)
         
         # Display age
         age_text = f"Age: {output_predict}"
         font_scale = max(0.6, w / 200)
         cv2.putText(frame, age_text, (x, y-10), 
-                    cv2.FONT_HERSHEY_DUPLEX, font_scale, color, 2)
+                    cv2.FONT_HERSHEY_DUPLEX, font_scale, text_color, 2)
+        
+    # Dọn dẹp các face_key cũ không còn xuất hiện (optional)
+    if len(age_history) > 10:  # Giới hạn số lượng face được lưu
+        # Xóa key cũ nhất nếu có quá nhiều
+        oldest_key = next(iter(age_history))
+        age_history.pop(oldest_key)
         
     return frame
